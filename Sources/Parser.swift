@@ -12,6 +12,7 @@ class ProjectOverview {
   var files: [URL] = []
   var folders: [URL] = []
   var dependencies: [String: Set<String>] = [:]
+      var symbolRelations: [String: Set<String>] = [:]
 }
 
 // MARK: - TypeInformation
@@ -83,6 +84,11 @@ enum Parser {
     for (typeName, dependencies) in overview.dependencies {
       print("  \(typeName.green) -> \(dependencies.joined(separator: ", ").green)")
     }
+
+        print("\nSymbol Relations:".blue.bold)
+    for (typeName, relatedSymbols) in overview.symbolRelations {
+        print("  \(typeName.green) -> \(relatedSymbols.joined(separator: ", ").green)")
+    }
   }
 }
 
@@ -144,6 +150,17 @@ class SourceFileVisitor: SyntaxVisitor {
 
     return .skipChildren
   }
+
+      override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
+        guard let base = node.base?.description.trimmingCharacters(in: .whitespaces) else {
+            return .skipChildren
+        }
+
+        let member = node.name.text
+        projectOverview.symbolRelations[base, default: []].insert(member)
+
+        return .skipChildren
+    }
 
   private func processTypeDeclaration(_ node: some SyntaxProtocol, typeKind: String) {
     if let typeIdentifier = getTypeIdentifier(from: node) {
