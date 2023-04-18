@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "sourceLanguages": [
+        "swift"
+      ],
+      "name": "Debug swana",
+      "program": "${workspaceFolder:Swana}/.build/debug/swana",
+      "args": ["Sources"],
+      "cwd": "${workspaceFolder:Swana}",
+      "preLaunchTask": "swift: Build Debug swana"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "sourceLanguages": [
+        "swift"
+      ],
+      "name": "Release swana",
+      "program": "${workspaceFolder:Swana}/.build/release/swana",
+      "args": ["Sources"],
+      "cwd": "${workspaceFolder:Swana}",
+      "preLaunchTask": "swift: Build Release swana"
+    }
+  ]
+}
