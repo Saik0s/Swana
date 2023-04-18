@@ -26,8 +26,7 @@ struct Swana: AsyncParsableCommand {
 
     let projectFolderURL = URL(fileURLWithPath: projectPath)
 
-    let projectOverview = ProjectOverview()
-    Parser.generateProjectOverview(at: projectFolderURL, projectOverview: projectOverview)
+    let projectOverview = Parser.generateProjectOverview(at: projectFolderURL)
     Parser.printProjectOverview(projectOverview)
   }
 }

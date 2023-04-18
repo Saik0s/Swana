@@ -6,26 +6,59 @@ import SwiftSyntaxParser
 // MARK: - ProjectOverview
 
 class ProjectOverview {
+  var files: [URL: FileOverview] = [:]
+  var folders: [URL] = []
+}
+
+// MARK: - FileOverview
+
+class FileOverview {
   var types: [String: TypeInformation] = [:]
   var functions: [String: Int] = [:]
   var symbols: [String: Int] = [:]
-  var files: [URL] = []
-  var folders: [URL] = []
-  var dependencies: [String: Set<String>] = [:]
-      var symbolRelations: [String: Set<String>] = [:]
 }
 
 // MARK: - TypeInformation
 
-struct TypeInformation {
-  var kind: String
-  var functions: [String]
+class TypeInformation {
+  let kind: String
+  var functions: [FunctionInformation] = []
+  var properties: [PropertyInformation] = []
+  var usedTypes: Set<String> = []
+
+  init(kind: String) {
+    self.kind = kind
+  }
+}
+
+// MARK: - FunctionInformation
+
+class FunctionInformation {
+  let name: String
+  let returnType: String
+  let argumentTypes: [String]
+  var usedTypes: Set<String> = []
+
+  init(name: String, returnType: String, argumentTypes: [String]) {
+    self.name = name
+    self.returnType = returnType
+    self.argumentTypes = argumentTypes
+  }
+}
+
+// MARK: - PropertyInformation
+
+struct PropertyInformation {
+  let name: String
+  let type: String
 }
 
 // MARK: - Parser
 
 enum Parser {
-  static func generateProjectOverview(at url: URL, projectOverview: ProjectOverview) {
+  static func generateProjectOverview(at url: URL) -> ProjectOverview {
+    let projectOverview = ProjectOverview()
+
     do {
       let fileManager = FileManager.default
       let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey]
@@ -33,9 +66,9 @@ enum Parser {
 
       while let fileURL = directoryEnumerator?.nextObject() as? URL {
         if fileURL.pathExtension == "swift" {
-          projectOverview.files.append(fileURL)
           let sourceFile = try SyntaxParser.parse(fileURL)
-          analyzeSourceFile(sourceFile, projectOverview: projectOverview)
+          let fileOverview = analyzeSourceFile(sourceFile)
+          projectOverview.files[fileURL] = fileOverview
         } else if let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
                   let isDirectory = resourceValues.allValues[.isDirectoryKey] as? Bool,
                   isDirectory {
@@ -43,51 +76,39 @@ enum Parser {
         }
       }
     } catch {
-      print("Error: \(error.localizedDescription)")
+      print("Error: \(error.localizedDescription)".red)
     }
+
+    return projectOverview
   }
 
-  static func analyzeSourceFile(_ sourceFile: SourceFileSyntax, projectOverview: ProjectOverview) {
-    let visitor = SourceFileVisitor(projectOverview: projectOverview)
+  static func analyzeSourceFile(_ sourceFile: SourceFileSyntax) -> FileOverview {
+    let fileOverview = FileOverview()
+    let visitor = SourceFileVisitor(fileOverview: fileOverview)
     visitor.walk(sourceFile)
+    return fileOverview
   }
 
   static func printProjectOverview(_ overview: ProjectOverview) {
-    print("\nProject Overview:")
-
-    print("\nFiles:".blue.bold)
-    for file in overview.files {
-      print("  \(file.path.green)")
-    }
-
-    print("\nFolders:".blue.bold)
-    for folder in overview.folders {
-      print("  \(folder.path.green)")
-    }
-
-    print("\nTypes:".blue.bold)
-    for (typeName, typeInfo) in overview.types {
-      print("  \(typeInfo.kind.green) \(typeName.darkGray)")
-    }
-
-    print("\nFunctions:".blue.bold)
-    for (funcName, funcCount) in overview.functions {
-      print("  \(funcName.green)", "(occurrences: \(funcCount))".darkGray)
-    }
-
-    print("\nSymbols:".blue.bold)
-    for (symbolName, symbolCount) in overview.symbols {
-      print("  \(symbolName.green)", "(occurrences: \(symbolCount))".darkGray)
-    }
-
-    print("\nDependencies:".blue.bold)
-    for (typeName, dependencies) in overview.dependencies {
-      print("  \(typeName.green) -> \(dependencies.joined(separator: ", ").green)")
-    }
-
-        print("\nSymbol Relations:".blue.bold)
-    for (typeName, relatedSymbols) in overview.symbolRelations {
-        print("  \(typeName.green) -> \(relatedSymbols.joined(separator: ", ").green)")
+    print("\nFiles:")
+    for (fileURL, fileOverview) in overview.files {
+      print("\nFile: \(fileURL.lastPathComponent)")
+      print("\n  Types:")
+      for (typeName, typeInfo) in fileOverview.types {
+        print("    \(typeName) (\(typeInfo.kind))")
+        print("      Functions:")
+        for functionInfo in typeInfo.functions {
+          let argumentList = zip(functionInfo.argumentTypes, functionInfo.argumentTypes).map { "\($0): \($1)" }.joined(separator: ", ")
+          print(
+            "        \(functionInfo.name)(\(argumentList)) -> Return Type: \(functionInfo.returnType) -> Used Types: \(functionInfo.usedTypes.sorted().joined(separator: ", "))"
+          )
+        }
+        print("      Properties:")
+        for propertyInfo in typeInfo.properties {
+          print("        \(propertyInfo.name): \(propertyInfo.type)")
+        }
+        print("      Used Types: \(typeInfo.usedTypes.sorted().joined(separator: ", "))")
+      }
     }
   }
 }
@@ -95,11 +116,12 @@ enum Parser {
 // MARK: - SourceFileVisitor
 
 class SourceFileVisitor: SyntaxVisitor {
-  var projectOverview: ProjectOverview
+  var fileOverview: FileOverview
   var currentTypeName: String?
+  var currentFunctionName: String?
 
-  init(projectOverview: ProjectOverview) {
-    self.projectOverview = projectOverview
+  init(fileOverview: FileOverview) {
+    self.fileOverview = fileOverview
     super.init(viewMode: .sourceAccurate)
   }
 
@@ -124,17 +146,46 @@ class SourceFileVisitor: SyntaxVisitor {
   }
 
   override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-    let functionName = node.identifier.text
-    projectOverview.functions[functionName, default: 0] += 1
+    if let currentType = currentTypeName,
+       let typeInfo = fileOverview.types[currentType] {
+      let functionName = node.identifier.text
+
+      let returnType = node.signature.output?.returnType.description.trimmingCharacters(in: .whitespaces) ?? "Void"
+      if isValidTypeName(returnType) {
+        typeInfo.usedTypes.insert(returnType)
+      }
+
+      let argumentTypes = node.signature.input.parameterList.compactMap { param -> String? in
+        let paramType = param.type?.description.trimmingCharacters(in: .whitespaces)
+        if let type = paramType, isValidTypeName(type) {
+          typeInfo.usedTypes.insert(type)
+        }
+        return paramType
+      }
+
+      let functionInfo = FunctionInformation(name: functionName, returnType: returnType, argumentTypes: argumentTypes)
+      typeInfo.functions.append(functionInfo)
+      currentFunctionName = functionName
+      fileOverview.types[currentType] = typeInfo
+    }
     return .visitChildren
   }
 
-  override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
-    let bindings = node.bindings
-    for binding in bindings {
-      if let identifier = binding.pattern.as(IdentifierPatternSyntax.self) {
-        let symbolName = identifier.identifier.text
-        projectOverview.symbols[symbolName, default: 0] += 1
+  override func visit(_ node: PatternBindingListSyntax) -> SyntaxVisitorContinueKind {
+    guard let currentType = currentTypeName,
+          let typeInfo = fileOverview.types[currentType] else {
+      return .visitChildren
+    }
+    for binding in node {
+      if let typeAnnotation = binding.typeAnnotation {
+        let propertyName = binding.pattern.description.trimmingCharacters(in: .whitespaces)
+        let propertyType = typeAnnotation.type.description.trimmingCharacters(in: .whitespaces)
+        if !propertyName.isKeywordOrLiteral() && isValidTypeName(propertyType) {
+          let propertyInfo = PropertyInformation(name: propertyName, type: propertyType)
+          typeInfo.properties.append(propertyInfo)
+          typeInfo.usedTypes.insert(propertyType)
+          fileOverview.types[currentType] = typeInfo
+        }
       }
     }
     return .visitChildren
@@ -145,45 +196,113 @@ class SourceFileVisitor: SyntaxVisitor {
 
     for inheritedType in node.inheritedTypeCollection {
       let inheritedTypeName = inheritedType.typeName.description.trimmingCharacters(in: .whitespaces)
-      projectOverview.dependencies[typeName, default: []].insert(inheritedTypeName)
+      if !inheritedTypeName.isKeywordOrLiteral() && fileOverview.types[typeName]?.usedTypes != nil {
+        fileOverview.types[typeName]?.usedTypes.insert(inheritedTypeName)
+      }
     }
 
     return .skipChildren
   }
 
-      override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
-        guard let base = node.base?.description.trimmingCharacters(in: .whitespaces) else {
-            return .skipChildren
-        }
-
-        let member = node.name.text
-        projectOverview.symbolRelations[base, default: []].insert(member)
-
-        return .skipChildren
+  override func visit(_ node: MemberAccessExprSyntax) -> SyntaxVisitorContinueKind {
+    let accessedType = node.name.text.trimmingCharacters(in: .whitespaces)
+    if let currentType = currentTypeName,
+       let typeInfo = fileOverview.types[currentType],
+       isValidTypeName(accessedType) {
+      typeInfo.usedTypes.insert(accessedType)
+      fileOverview.types[currentType] = typeInfo
     }
 
-  private func processTypeDeclaration(_ node: some SyntaxProtocol, typeKind: String) {
-    if let typeIdentifier = getTypeIdentifier(from: node) {
-      let typeName = typeIdentifier.text
-      if projectOverview.types[typeName] == nil {
-        projectOverview.types[typeName] = TypeInformation(kind: typeKind, functions: [])
+    return .skipChildren
+  }
+
+  override func visit(_ node: TypeAnnotationSyntax) -> SyntaxVisitorContinueKind {
+    let typeName = node.type.description.trimmingCharacters(in: .whitespaces)
+    if let currentType = currentTypeName,
+       let typeInfo = fileOverview.types[currentType] {
+      let extractedTypes = extractTypes(from: typeName)
+      for extractedType in extractedTypes {
+        if isValidTypeName(extractedType) {
+          typeInfo.usedTypes.insert(extractedType)
+          fileOverview.types[currentType] = typeInfo
+        }
       }
+    }
+
+    return .skipChildren
+  }
+
+  private func extractTypes(from typeName: String) -> Set<String> {
+    var types: Set<String> = []
+    var currentType = ""
+    var angleBracketDepth = 0
+
+    for character in typeName {
+      switch character {
+      case "<":
+        if angleBracketDepth == 0 {
+          types.insert(currentType)
+          currentType = ""
+        } else {
+          currentType.append(character)
+        }
+        angleBracketDepth += 1
+      case ">":
+        angleBracketDepth -= 1
+        if angleBracketDepth == 0 {
+          types.insert(currentType)
+          currentType = ""
+        } else {
+          currentType.append(character)
+        }
+      case ",":
+        if angleBracketDepth == 1 {
+          types.insert(currentType.trimmingCharacters(in: .whitespaces))
+          currentType = ""
+        } else {
+          currentType.append(character)
+        }
+      default:
+        currentType.append(character)
+      }
+    }
+
+    if !currentType.isEmpty {
+      types.insert(currentType.trimmingCharacters(in: .whitespaces))
+    }
+
+    return types
+  }
+
+  private func processTypeDeclaration(_ node: SyntaxProtocol, typeKind: String) {
+    var typeName = ""
+    if let classNode = node as? ClassDeclSyntax {
+      typeName = classNode.identifier.text
+    } else if let structNode = node as? StructDeclSyntax {
+      typeName = structNode.identifier.text
+    } else if let enumNode = node as? EnumDeclSyntax {
+      typeName = enumNode.identifier.text
+    } else if let protocolNode = node as? ProtocolDeclSyntax {
+      typeName = protocolNode.identifier.text
+    }
+
+    if !typeName.isEmpty && !typeName.isKeywordOrLiteral() {
+      let typeInfo = TypeInformation(kind: typeKind)
+      fileOverview.types[typeName] = typeInfo
       currentTypeName = typeName
     }
   }
 
-  private func getTypeIdentifier(from node: SyntaxProtocol) -> TokenSyntax? {
-    switch node {
-    case let classDecl as ClassDeclSyntax:
-      return classDecl.identifier
-    case let structDecl as StructDeclSyntax:
-      return structDecl.identifier
-    case let enumDecl as EnumDeclSyntax:
-      return enumDecl.identifier
-    case let protocolDecl as ProtocolDeclSyntax:
-      return protocolDecl.identifier
-    default:
-      return nil
-    }
+  private func isValidTypeName(_ typeName: String) -> Bool {
+    !typeName.isKeywordOrLiteral() && (typeName.first?.isUppercase == true || typeName.first == "[")
+  }
+}
+
+extension String {
+  func isKeywordOrLiteral() -> Bool {
+    let keywordsAndLiterals: Set<String> = [
+      "self", "super", "nil", "true", "false",
+    ]
+    return keywordsAndLiterals.contains(self)
   }
 }
