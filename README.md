@@ -1,16 +1,5 @@
-<div align="center" style="font-family: monospace;">
-<span style="color: blue; font-weight: bold;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-<span style="color: blue; font-weight: bold;">&nbsp;@@@@@@&nbsp;&nbsp;&nbsp;@@@&nbsp;&nbsp;@@@&nbsp;&nbsp;@@@&nbsp;&nbsp;&nbsp;@@@@@@&nbsp;&nbsp;&nbsp;@@@&nbsp;&nbsp;@@@&nbsp;&nbsp;&nbsp;@@@@@@&nbsp;&nbsp;&nbsp;</span>
-<span style="color: blue; font-weight: bold;">@@@@@@@&nbsp;&nbsp;&nbsp;@@@&nbsp;&nbsp;@@@&nbsp;&nbsp;@@@&nbsp;&nbsp;@@@@@@@@&nbsp;&nbsp;@@@@&nbsp;@@@&nbsp;&nbsp;@@@@@@@@&nbsp;&nbsp;</span>
-<span style="color: blue; font-weight: bold;">!@@&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;@@!&nbsp;&nbsp;@@!&nbsp;&nbsp;@@!&nbsp;&nbsp;@@!&nbsp;&nbsp;@@@&nbsp;&nbsp;@@!@!@@@&nbsp;&nbsp;@@!&nbsp;&nbsp;@@@&nbsp;&nbsp;</span>
-<span style="color: blue; font-weight: bold;">!@!&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;!@!&nbsp;&nbsp;!@!&nbsp;&nbsp;!@!&nbsp;&nbsp;!@!&nbsp;&nbsp;@!@&nbsp;&nbsp;!@!!@!@!&nbsp;&nbsp;!@!&nbsp;&nbsp;@!@&nbsp;&nbsp;</span>
-<span style="color: blue; font-weight: bold;">!!@@!!&nbsp;&nbsp;&nbsp;&nbsp;@!!&nbsp;&nbsp;!!@&nbsp;&nbsp;@!@&nbsp;&nbsp;@!@!@!@!&nbsp;&nbsp;@!@&nbsp;!!@!&nbsp;&nbsp;@!@!@!@!&nbsp;&nbsp;</span>
-<span style="color: yellow; font-weight: bold;">&nbsp;!!@!!!&nbsp;&nbsp;&nbsp;!@!&nbsp;&nbsp;!!!&nbsp;&nbsp;!@!&nbsp;&nbsp;!!!@!!!!&nbsp;&nbsp;!@!&nbsp;&nbsp;!!!&nbsp;&nbsp;!!!@!!!!&nbsp;&nbsp;</span>
-<span style="color: yellow; font-weight: bold;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;!:!&nbsp;&nbsp;!!:&nbsp;&nbsp;!!:&nbsp;&nbsp;!!:&nbsp;&nbsp;!!:&nbsp;&nbsp;!!!&nbsp;&nbsp;!!:&nbsp;&nbsp;!!!&nbsp;&nbsp;!!:&nbsp;&nbsp;!!!&nbsp;&nbsp;</span>
-<span style="color: yellow; font-weight: bold;">&nbsp;&nbsp;&nbsp;&nbsp;!:!&nbsp;&nbsp;&nbsp;:!:&nbsp;&nbsp;:!:&nbsp;&nbsp;:!:&nbsp;&nbsp;:!:&nbsp;&nbsp;!:!&nbsp;&nbsp;:!:&nbsp;&nbsp;!:!&nbsp;&nbsp;:!:&nbsp;&nbsp;!:!&nbsp;&nbsp;</span>
-<span style="color: yellow; font-weight: bold;">::::&nbsp;::&nbsp;&nbsp;&nbsp;&nbsp;::::&nbsp;::&nbsp;:::&nbsp;&nbsp;&nbsp;::&nbsp;&nbsp;&nbsp;:::&nbsp;&nbsp;&nbsp;::&nbsp;&nbsp;&nbsp;::&nbsp;&nbsp;::&nbsp;&nbsp;&nbsp;:::&nbsp;&nbsp;</span>
-<span style="color: yellow; font-weight: bold;">::&nbsp;:&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;::&nbsp;:&nbsp;&nbsp;:&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;&nbsp;:&nbsp;:&nbsp;&nbsp;::&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;&nbsp;:&nbsp;:&nbsp;&nbsp;</span>
-<span style="color: yellow; font-weight: bold;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+<div align="center">
+<img src=".github/screenshot.png" width="500">
 </div>
 
 # Swana
