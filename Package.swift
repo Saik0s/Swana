@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
   name: "Swana",
   platforms: [
-    .macOS(.v10_15),
+    .macOS(.v13),
   ],
   products: [
     .executable(

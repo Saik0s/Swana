@@ -6,8 +6,15 @@ import SwiftSyntaxParser
 // MARK: - ProjectOverview
 
 class ProjectOverview {
+  var url: URL
   var files: [URL: FileOverview] = [:]
   var folders: [URL] = []
+
+  init(url: URL, files: [URL: FileOverview] = [:], folders: [URL] = []) {
+    self.url = url
+    self.files = files
+    self.folders = folders
+  }
 }
 
 // MARK: - FileOverview
@@ -16,6 +23,12 @@ class FileOverview {
   var types: [String: TypeInformation] = [:]
   var functions: [String: Int] = [:]
   var symbols: [String: Int] = [:]
+
+  init(types: [String: TypeInformation] = [:], functions: [String: Int] = [:], symbols: [String: Int] = [:]) {
+    self.types = types
+    self.functions = functions
+    self.symbols = symbols
+  }
 }
 
 // MARK: - TypeInformation
@@ -26,8 +39,11 @@ class TypeInformation {
   var properties: [PropertyInformation] = []
   var usedTypes: Set<String> = []
 
-  init(kind: String) {
+  init(kind: String, functions: [FunctionInformation] = [], properties: [PropertyInformation] = [], usedTypes: Set<String> = []) {
     self.kind = kind
+    self.functions = functions
+    self.properties = properties
+    self.usedTypes = usedTypes
   }
 }
 
@@ -39,10 +55,11 @@ class FunctionInformation {
   let argumentTypes: [String]
   var usedTypes: Set<String> = []
 
-  init(name: String, returnType: String, argumentTypes: [String]) {
+  init(name: String, returnType: String, argumentTypes: [String], usedTypes: Set<String> = []) {
     self.name = name
     self.returnType = returnType
     self.argumentTypes = argumentTypes
+    self.usedTypes = usedTypes
   }
 }
 
@@ -57,22 +74,28 @@ struct PropertyInformation {
 
 enum Parser {
   static func generateProjectOverview(at url: URL) -> ProjectOverview {
-    let projectOverview = ProjectOverview()
+    let projectOverview = ProjectOverview(url: url)
 
     do {
       let fileManager = FileManager.default
       let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey]
-      let directoryEnumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: Array(resourceKeys))
 
-      while let fileURL = directoryEnumerator?.nextObject() as? URL {
-        if fileURL.pathExtension == "swift" {
-          let sourceFile = try SyntaxParser.parse(fileURL)
-          let fileOverview = analyzeSourceFile(sourceFile)
-          projectOverview.files[fileURL] = fileOverview
-        } else if let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
-                  let isDirectory = resourceValues.allValues[.isDirectoryKey] as? Bool,
-                  isDirectory {
-          projectOverview.folders.append(fileURL)
+      if url.pathExtension == "swift" {
+        let sourceFile = try SyntaxParser.parse(url)
+        let fileOverview = analyzeSourceFile(sourceFile)
+        projectOverview.files[url] = fileOverview
+      } else {
+        let directoryEnumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: Array(resourceKeys))
+        while let fileURL = directoryEnumerator?.nextObject() as? URL {
+          if fileURL.pathExtension == "swift" {
+            let sourceFile = try SyntaxParser.parse(fileURL)
+            let fileOverview = analyzeSourceFile(sourceFile)
+            projectOverview.files[fileURL] = fileOverview
+          } else if let resourceValues = try? fileURL.resourceValues(forKeys: resourceKeys),
+                    let isDirectory = resourceValues.allValues[.isDirectoryKey] as? Bool,
+                    isDirectory {
+            projectOverview.folders.append(fileURL)
+          }
         }
       }
     } catch {
@@ -90,24 +113,24 @@ enum Parser {
   }
 
   static func printProjectOverview(_ overview: ProjectOverview) {
-    print("\nFiles:")
+    print("\nFiles:".lightGreen, "\(overview.url.relativePath)".blue)
     for (fileURL, fileOverview) in overview.files {
-      print("\nFile: \(fileURL.lastPathComponent)")
-      print("\n  Types:")
+      print("     File:".darkGray, "\(fileURL.absoluteString.trimmingPrefix(overview.url.absoluteString))".blue)
       for (typeName, typeInfo) in fileOverview.types {
-        print("    \(typeName) (\(typeInfo.kind))")
-        print("      Functions:")
+        print("         ".darkGray, "\(typeName.yellow.bold) (\(typeInfo.kind))", separator: "")
+        print("         ├───Functions:".darkGray)
         for functionInfo in typeInfo.functions {
-          let argumentList = zip(functionInfo.argumentTypes, functionInfo.argumentTypes).map { "\($0): \($1)" }.joined(separator: ", ")
-          print(
-            "        \(functionInfo.name)(\(argumentList)) -> Return Type: \(functionInfo.returnType) -> Used Types: \(functionInfo.usedTypes.sorted().joined(separator: ", "))"
-          )
+          let argumentList = functionInfo.argumentTypes.joined(separator: ", ")
+          print("         │   ├───\(functionInfo.name.yellow.bold)".green)
+          print("         │   │   ├───Argument Types:".darkGray, "\(argumentList)".lightMagenta)
+          print("         │   │   ├───Return Type:".darkGray, "\(functionInfo.returnType)".lightMagenta)
+          print("         │   │   └───Used Types:".darkGray, "\(functionInfo.usedTypes.sorted().joined(separator: ", "))".lightMagenta)
         }
-        print("      Properties:")
+        print("         └───Properties:".darkGray)
         for propertyInfo in typeInfo.properties {
-          print("        \(propertyInfo.name): \(propertyInfo.type)")
+        print("         │   └───".darkGray, "\(propertyInfo.name.yellow.bold): \(propertyInfo.type.lightMagenta)", separator: "")
         }
-        print("      Used Types: \(typeInfo.usedTypes.sorted().joined(separator: ", "))")
+        print("         └───Used Types:".darkGray, "\(typeInfo.usedTypes.sorted().joined(separator: ", "))".lightMagenta)
       }
     }
   }
@@ -117,12 +140,13 @@ enum Parser {
 
 class SourceFileVisitor: SyntaxVisitor {
   var fileOverview: FileOverview
-  var currentTypeName: String?
+  var typeNameStack: [String] = []
   var currentFunctionName: String?
+  var currentFunctionInfo: FunctionInformation?
 
   init(fileOverview: FileOverview) {
     self.fileOverview = fileOverview
-    super.init(viewMode: .sourceAccurate)
+    super.init(viewMode: .all)
   }
 
   override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
@@ -166,6 +190,7 @@ class SourceFileVisitor: SyntaxVisitor {
       let functionInfo = FunctionInformation(name: functionName, returnType: returnType, argumentTypes: argumentTypes)
       typeInfo.functions.append(functionInfo)
       currentFunctionName = functionName
+      currentFunctionInfo = functionInfo
       fileOverview.types[currentType] = typeInfo
     }
     return .visitChildren
@@ -216,17 +241,37 @@ class SourceFileVisitor: SyntaxVisitor {
     return .skipChildren
   }
 
+  override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
+    if let currentType = currentTypeName,
+       let typeInfo = fileOverview.types[currentType] {
+      let functionName = "init"
+
+      let argumentTypes = node.signature.input.parameterList.compactMap { param -> String? in
+        param.type?.description.trimmingCharacters(in: .whitespaces)
+      }
+
+      let functionInfo = FunctionInformation(name: functionName, returnType: "Void", argumentTypes: argumentTypes)
+      typeInfo.functions.append(functionInfo)
+      currentFunctionName = functionName
+      currentFunctionInfo = functionInfo
+      fileOverview.types[currentType] = typeInfo
+    }
+    return .visitChildren
+  }
+
   override func visit(_ node: TypeAnnotationSyntax) -> SyntaxVisitorContinueKind {
     let typeName = node.type.description.trimmingCharacters(in: .whitespaces)
     if let currentType = currentTypeName,
        let typeInfo = fileOverview.types[currentType] {
-      let extractedTypes = extractTypes(from: typeName)
-      for extractedType in extractedTypes {
-        if isValidTypeName(extractedType) {
-          typeInfo.usedTypes.insert(extractedType)
-          fileOverview.types[currentType] = typeInfo
-        }
-      }
+      let types = extractTypes(from: typeName)
+      typeInfo.usedTypes.formUnion(types)
+      fileOverview.types[currentType] = typeInfo
+    }
+
+    if let functionInfo = currentFunctionInfo {
+      let types = extractTypes(from: typeName)
+      functionInfo.usedTypes.formUnion(types)
+      currentFunctionInfo = functionInfo
     }
 
     return .skipChildren
@@ -289,19 +334,51 @@ class SourceFileVisitor: SyntaxVisitor {
     if !typeName.isEmpty && !typeName.isKeywordOrLiteral() {
       let typeInfo = TypeInformation(kind: typeKind)
       fileOverview.types[typeName] = typeInfo
-      currentTypeName = typeName
+      typeNameStack.append(typeName)
     }
   }
 
+  private func leaveTypeDeclaration() {
+    typeNameStack.removeLast()
+  }
+
+  override func visitPost(_: ClassDeclSyntax) {
+    leaveTypeDeclaration()
+  }
+
+  override func visitPost(_: StructDeclSyntax) {
+    leaveTypeDeclaration()
+  }
+
+  override func visitPost(_: EnumDeclSyntax) {
+    leaveTypeDeclaration()
+  }
+
+  override func visitPost(_: ProtocolDeclSyntax) {
+    leaveTypeDeclaration()
+  }
+
+  override func visitPost(_: FunctionDeclSyntax) {
+    currentFunctionInfo = nil
+  }
+
+  override func visitPost(_: InitializerDeclSyntax) {
+    currentFunctionInfo = nil
+  }
+
+  private var currentTypeName: String? {
+    typeNameStack.last
+  }
+
   private func isValidTypeName(_ typeName: String) -> Bool {
-    !typeName.isKeywordOrLiteral() && (typeName.first?.isUppercase == true || typeName.first == "[")
+    !typeName.isKeywordOrLiteral() && (typeName.first?.isUppercase == true || typeName.first == "[" || typeName.first == "(")
   }
 }
 
 extension String {
   func isKeywordOrLiteral() -> Bool {
     let keywordsAndLiterals: Set<String> = [
-      "self", "super", "nil", "true", "false",
+      "self", "super", "nil", "true", "false"
     ]
     return keywordsAndLiterals.contains(self)
   }
