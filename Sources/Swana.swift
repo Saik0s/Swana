@@ -1,11 +1,9 @@
 import ANSITerminal
-import AppKit
 import ArgumentParser
 import Foundation
 
 // MARK: - Swana
 
-@available(macOS 12.0, *)
 @main
 struct Swana: AsyncParsableCommand {
   @Argument(help: "Project path") var projectPath: String
