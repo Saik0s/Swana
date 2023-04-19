@@ -128,7 +128,7 @@ enum Parser {
         }
         print("         └───Properties:".darkGray)
         for propertyInfo in typeInfo.properties {
-        print("         │   └───".darkGray, "\(propertyInfo.name.yellow.bold): \(propertyInfo.type.lightMagenta)", separator: "")
+          print("         │   └───".darkGray, "\(propertyInfo.name.yellow.bold): \(propertyInfo.type.lightMagenta)", separator: "")
         }
         print("         └───Used Types:".darkGray, "\(typeInfo.usedTypes.sorted().joined(separator: ", "))".lightMagenta)
       }
@@ -378,7 +378,7 @@ class SourceFileVisitor: SyntaxVisitor {
 extension String {
   func isKeywordOrLiteral() -> Bool {
     let keywordsAndLiterals: Set<String> = [
-      "self", "super", "nil", "true", "false"
+      "self", "super", "nil", "true", "false",
     ]
     return keywordsAndLiterals.contains(self)
   }

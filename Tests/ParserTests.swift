@@ -65,7 +65,7 @@ class ParserTests: XCTestCase {
 
     let projectOverview = Parser.generateProjectOverview(at: temporaryFileURL)
     XCTAssertEqual(projectOverview.files.count, 1, "Project overview should have exactly 1 file")
-    
+
     let fileOverview = projectOverview.files[temporaryFileURL]!
     XCTAssertNotNil(fileOverview, "File overview should not be nil")
 
